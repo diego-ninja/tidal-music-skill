@@ -3,7 +3,7 @@
  * Proporciona almacenamiento temporal para reducir llamadas a APIs externas
  */
 
-const logger = require('./logger');
+const logger = require('../utils/logger');
 const config = require('./configService');
 
 /**

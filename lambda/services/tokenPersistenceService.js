@@ -5,7 +5,7 @@
 
 const DynamoDbService = require('./dynamoDbService');
 const logger = require('../utils/logger');
-const config = require('../utils/configService');
+const config = require('./configService');
 
 /**
  * Clase de servicio para persistencia de tokens

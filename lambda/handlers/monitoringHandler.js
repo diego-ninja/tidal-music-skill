@@ -4,8 +4,8 @@
  */
 
 const logger = require('../utils/logger');
-const config = require('../utils/configService');
-const cacheService = require('../utils/cacheService');
+const config = require('../services/configService');
+const cacheService = require('../services/cacheService');
 const tidalService = require('../services/tidalService');
 const tokenPersistenceService = require('../services/tokenPersistenceService');
 

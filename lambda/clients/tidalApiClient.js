@@ -5,7 +5,7 @@
 
 const axios = require('axios');
 const logger = require('../utils/logger');
-const config = require('../utils/configService');
+const config = require('../services/configService');
 
 /**
  * Cliente para realizar peticiones a la API oficial de Tidal

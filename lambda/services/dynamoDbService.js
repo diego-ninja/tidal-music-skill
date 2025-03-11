@@ -5,7 +5,7 @@
 
 const AWS = require('aws-sdk');
 const logger = require('../utils/logger');
-const config = require('../utils/configService');
+const config = require('./configService');
 
 /**
  * Clase de servicio para interactuar con DynamoDB

@@ -4,10 +4,10 @@
  */
 
 const logger = require('../utils/logger');
-const config = require('../utils/configService');
+const config = require('../services/configService');
 const tidalApi = require('../clients/tidalApiClient');
 const tokenPersistenceService = require('../services/tokenPersistenceService');
-const cacheService = require('../utils/cacheService');
+const cacheService = require('../services/cacheService');
 
 // Namespace para la caché de Tidal
 const CACHE_NS = 'tidal';
