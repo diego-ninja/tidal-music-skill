@@ -4,10 +4,10 @@
  */
 
 const logger = require('../utils/logger');
-const config = require('../services/configService');
-const tidalApi = require('../clients/tidalApiClient');
+const config = require('../services/configService');  // Ruta corregida
+const tidalApi = require('../clients/tidalApiClient');  // Ruta corregida
 const tokenPersistenceService = require('../services/tokenPersistenceService');
-const cacheService = require('../services/cacheService');
+const cacheService = require('../services/cacheService');  // Ruta corregida
 
 // Namespace para la caché de Tidal
 const CACHE_NS = 'tidal';
@@ -57,8 +57,11 @@ class TidalService {
         CACHE_NS,
         cacheKey,
         async () => {
+          // Crear función que acepta el token como parámetro
+          const fetchUserInfo = (token) => tidalApi.get('/me', {}, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get('/me', {}, accessToken),
+            fetchUserInfo,
             accessToken,
             userId
           );
@@ -98,8 +101,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchSearchResults = (token) => tidalApi.get('/search', params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get('/search', params, accessToken),
+            fetchSearchResults,
             accessToken,
             userId
           );
@@ -149,8 +155,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchTrackResults = (token) => tidalApi.get('/search/tracks', params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get('/search/tracks', params, accessToken),
+            fetchTrackResults,
             accessToken,
             userId
           );
@@ -196,8 +205,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchAlbumResults = (token) => tidalApi.get('/search/albums', params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get('/search/albums', params, accessToken),
+            fetchAlbumResults,
             accessToken,
             userId
           );
@@ -237,8 +249,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchArtistResults = (token) => tidalApi.get('/search/artists', params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get('/search/artists', params, accessToken),
+            fetchArtistResults,
             accessToken,
             userId
           );
@@ -278,8 +293,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchPlaylistResults = (token) => tidalApi.get('/search/playlists', params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get('/search/playlists', params, accessToken),
+            fetchPlaylistResults,
             accessToken,
             userId
           );
@@ -318,8 +336,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchAlbumTracks = (token) => tidalApi.get(`/albums/${albumId}/tracks`, params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get(`/albums/${albumId}/tracks`, params, accessToken),
+            fetchAlbumTracks,
             accessToken,
             userId
           );
@@ -356,8 +377,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchPlaylistTracks = (token) => tidalApi.get(`/playlists/${playlistId}/tracks`, params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get(`/playlists/${playlistId}/tracks`, params, accessToken),
+            fetchPlaylistTracks,
             accessToken,
             userId
           );
@@ -395,8 +419,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchArtistTopTracks = (token) => tidalApi.get(`/artists/${artistId}/toptracks`, params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get(`/artists/${artistId}/toptracks`, params, accessToken),
+            fetchArtistTopTracks,
             accessToken,
             userId
           );
@@ -433,9 +460,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
-          // La API v2 de Tidal usa un endpoint específico para obtener la URL de streaming
+          // Crear función que acepta el token como parámetro
+          const fetchStreamUrl = (token) => tidalApi.get(`/tracks/${trackId}/playbackinfo`, params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get(`/tracks/${trackId}/playbackinfo`, params, accessToken),
+            fetchStreamUrl,
             accessToken,
             userId
           );
@@ -476,8 +505,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchFavorites = (token) => tidalApi.get(`/favorites/${type}`, params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get(`/favorites/${type}`, params, accessToken),
+            fetchFavorites,
             accessToken,
             userId
           );
@@ -513,8 +545,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchUserPlaylists = (token) => tidalApi.get('/my-collection/playlists/folders', params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get('/my-collection/playlists/folders', params, accessToken),
+            fetchUserPlaylists,
             accessToken,
             userId
           );
@@ -548,8 +583,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchRecommendations = (token) => tidalApi.get('/recommended/sections', params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get('/recommended/sections', params, accessToken),
+            fetchRecommendations,
             accessToken,
             userId
           );
@@ -584,8 +622,11 @@ class TidalService {
             countryCode: this.config.countryCode
           };
           
+          // Crear función que acepta el token como parámetro
+          const fetchTrackDetails = (token) => tidalApi.get(`/tracks/${trackId}`, params, token);
+          
           const response = await this._executeWithTokenRefresh(
-            () => tidalApi.get(`/tracks/${trackId}`, params, accessToken),
+            fetchTrackDetails,
             accessToken,
             userId
           );
@@ -631,7 +672,7 @@ class TidalService {
   /**
    * Ejecuta una función con soporte para refresco automático de token
    * Si ocurre un error 401, intenta refrescar el token y reintentar la operación
-   * @param {Function} apiCallFn - Función que realiza la llamada a la API
+   * @param {Function} apiCallFn - Función que realiza la llamada a la API (debe aceptar token como parámetro)
    * @param {string} accessToken - Token de acceso actual
    * @param {string} userId - ID de usuario de Alexa (opcional)
    * @returns {Promise<any>} - Resultado de la llamada a la API
@@ -640,7 +681,7 @@ class TidalService {
   async _executeWithTokenRefresh(apiCallFn, accessToken, userId) {
     try {
       // Intentar realizar la llamada API con el token actual
-      return await apiCallFn();
+      return await apiCallFn(accessToken);
     } catch (error) {
       // Si el error no es 401 (Unauthorized) o no hay token, propagar el error
       if (!error.response || error.response.status !== 401 || !accessToken) {
@@ -697,17 +738,8 @@ class TidalService {
         
         logger.info('Token refrescado exitosamente', { userId });
         
-        // Actualizar la función de llamada para usar el nuevo token
-        const updatedApiCallFn = () => {
-          // Reemplazar el token en las llamadas a la API
-          // Este enfoque asume que el accessToken se pasa como último parámetro
-          // en todos los métodos de tidalApi
-          return apiCallFn.toString()
-            .replace(accessToken, newTokens.access_token);
-        };
-        
-        // Reintentar la llamada original con el nuevo token
-        return await updatedApiCallFn();
+        // Ahora simplemente reintentar la llamada original con el nuevo token
+        return await apiCallFn(newTokens.access_token);
       } catch (refreshError) {
         logger.error('Error al refrescar token', { refreshError, userId });
         // Si falla el refresh, propagar el error original
