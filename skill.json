@@ -1,0 +1,82 @@
+{
+    "manifest": {
+      "publishingInformation": {
+        "locales": {
+          "es-ES": {
+            "summary": "Reproduce música de Tidal en tu dispositivo Alexa",
+            "examplePhrases": [
+              "Alexa, abre tidal música",
+              "Alexa, pide a tidal música que reproduzca Despacito",
+              "Alexa, pide a tidal música que busque canciones de Rosalía"
+            ],
+            "keywords": [
+              "música",
+              "tidal",
+              "streaming",
+              "audio",
+              "canciones"
+            ],
+            "name": "Tidal Música",
+            "description": "Reproduce tu música favorita de Tidal directamente desde tus dispositivos Amazon Alexa. Busca artistas, canciones, álbumes y playlists de tu colección de Tidal."
+          }
+        },
+        "isAvailableWorldwide": false,
+        "testingInstructions": "Se requiere una cuenta de Tidal para utilizar esta skill. Durante el proceso de vinculación de cuentas, el usuario deberá iniciar sesión con sus credenciales de Tidal.",
+        "category": "MUSIC_AND_AUDIO_ACCESSORIES",
+        "distributionCountries": [
+          "ES",
+          "US",
+          "MX",
+          "CO",
+          "AR"
+        ]
+      },
+      "apis": {
+        "custom": {
+          "endpoint": {
+            "uri": "arn:aws:lambda:us-east-1:XXXXXXXXXXXX:function:tidal-music-skill"
+          },
+          "interfaces": [
+            {
+              "type": "AUDIO_PLAYER"
+            }
+          ]
+        }
+      },
+      "manifestVersion": "1.0",
+      "permissions": [
+        {
+          "name": "alexa::profile:given_name:read"
+        }
+      ],
+      "privacyAndCompliance": {
+        "allowsPurchases": false,
+        "locales": {
+          "es-ES": {
+            "privacyPolicyUrl": "https://www.example.com/privacy-policy",
+            "termsOfUseUrl": "https://www.example.com/terms-of-use"
+          }
+        },
+        "isExportCompliant": true,
+        "containsAds": false,
+        "isChildDirected": false,
+        "usesPersonalInfo": true
+      },
+      "accountLinking": {
+        "domains": [
+          "example.com"
+        ],
+        "type": "AUTH_CODE",
+        "authorizationUrl": "https://accounts.tidal.com/authorize",
+        "accessTokenUrl": "https://accounts.tidal.com/token",
+        "accessTokenScheme": "HTTP_BASIC",
+        "clientId": "YOUR_CLIENT_ID",
+        "scopes": [
+          "r_usr",
+          "w_usr",
+          "r_sub",
+          "w_sub"
+        ]
+      }
+    }
+  }

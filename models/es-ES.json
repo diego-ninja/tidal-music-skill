@@ -1,0 +1,91 @@
+{
+    "interactionModel": {
+      "languageModel": {
+        "invocationName": "tidal música",
+        "intents": [
+          {
+            "name": "AMAZON.CancelIntent",
+            "samples": []
+          },
+          {
+            "name": "AMAZON.HelpIntent",
+            "samples": []
+          },
+          {
+            "name": "AMAZON.StopIntent",
+            "samples": []
+          },
+          {
+            "name": "AMAZON.NavigateHomeIntent",
+            "samples": []
+          },
+          {
+            "name": "PlayMusicIntent",
+            "slots": [
+              {
+                "name": "artist",
+                "type": "AMAZON.MusicGroup"
+              },
+              {
+                "name": "song",
+                "type": "AMAZON.MusicRecording"
+              },
+              {
+                "name": "album",
+                "type": "AMAZON.MusicAlbum"
+              },
+              {
+                "name": "playlist",
+                "type": "AMAZON.MusicPlaylist"
+              }
+            ],
+            "samples": [
+              "reproducir {song}",
+              "reproducir {song} de {artist}",
+              "poner {song}",
+              "poner {song} de {artist}",
+              "reproducir música de {artist}",
+              "reproducir el álbum {album}",
+              "reproducir el álbum {album} de {artist}",
+              "poner el álbum {album}",
+              "reproducir la playlist {playlist}",
+              "poner la playlist {playlist}"
+            ]
+          },
+          {
+            "name": "SearchMusicIntent",
+            "slots": [
+              {
+                "name": "searchTerm",
+                "type": "AMAZON.SearchQuery"
+              }
+            ],
+            "samples": [
+              "buscar {searchTerm}",
+              "encontrar {searchTerm}",
+              "buscar música de {searchTerm}",
+              "buscar canciones de {searchTerm}",
+              "buscar álbumes de {searchTerm}"
+            ]
+          },
+          {
+            "name": "AMAZON.PauseIntent",
+            "samples": []
+          },
+          {
+            "name": "AMAZON.ResumeIntent",
+            "samples": []
+          },
+          {
+            "name": "AMAZON.NextIntent",
+            "samples": []
+          },
+          {
+            "name": "AMAZON.PreviousIntent",
+            "samples": []
+          }
+        ],
+        "types": []
+      }
+    }
+  }
