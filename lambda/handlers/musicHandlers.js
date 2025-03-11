@@ -28,6 +28,9 @@ const PlayMusicIntentHandler = {
           .getResponse();
       }
       
+      // Obtener userId para persistencia
+      const userId = handlerInput.requestEnvelope.context.System.user.userId;
+      
       // Obtener slots de la solicitud
       const intent = handlerInput.requestEnvelope.request.intent;
       const slots = intent.slots;
@@ -42,21 +45,34 @@ const PlayMusicIntentHandler = {
         const songName = slots.song.value;
         const artistName = slots.artist && slots.artist.value ? slots.artist.value : null;
         
-        logger.info('Buscando canción', { songName, artistName });
+        logger.info('Buscando canción', { songName, artistName, userId });
         
-        const searchResult = await tidalService.searchTrack(accessToken, songName, artistName);
+        const searchResult = await tidalService.searchTrack(accessToken, songName, artistName, userId);
         
         if (searchResult && searchResult.tracks && searchResult.tracks.length > 0) {
           const track = searchResult.tracks[0];
-          streamUrl = await tidalService.getStreamUrl(accessToken, track.id);
+          streamUrl = await tidalService.getStreamUrl(accessToken, track.id, userId);
           metadata = {
             title: track.title,
             artist: track.artist.name,
             albumArtUrl: track.album.cover,
-            albumName: track.album.title
+            albumName: track.album.title,
+            token: track.id // Usar track.id como token para identificación única
           };
           
           speechText = `Reproduciendo ${track.title} de ${track.artist.name}`;
+          
+          // Guardar el estado de reproducción en DynamoDB
+          await playbackPersistenceService.savePlaybackState(userId, {
+            type: 'track',
+            trackId: track.id,
+            title: track.title,
+            artist: track.artist.name,
+            albumName: track.album.title,
+            offsetInMilliseconds: 0,
+            token: track.id,
+            url: streamUrl
+          });
         } else {
           throw new Error('No se encontró la canción');
         }
@@ -65,31 +81,53 @@ const PlayMusicIntentHandler = {
         const albumName = slots.album.value;
         const artistName = slots.artist && slots.artist.value ? slots.artist.value : null;
         
-        logger.info('Buscando álbum', { albumName, artistName });
+        logger.info('Buscando álbum', { albumName, artistName, userId });
         
-        const searchResult = await tidalService.searchAlbum(accessToken, albumName, artistName);
+        const searchResult = await tidalService.searchAlbum(accessToken, albumName, artistName, userId);
         
         if (searchResult && searchResult.albums && searchResult.albums.length > 0) {
           const album = searchResult.albums[0];
-          const trackList = await tidalService.getAlbumTracks(accessToken, album.id);
+          const trackList = await tidalService.getAlbumTracks(accessToken, album.id, userId);
           
           if (trackList && trackList.length > 0) {
-            streamUrl = await tidalService.getStreamUrl(accessToken, trackList[0].id);
+            streamUrl = await tidalService.getStreamUrl(accessToken, trackList[0].id, userId);
+            
+            // Crear una lista de tracks simplificada para almacenamiento
+            const simplifiedTrackList = trackList.map(track => ({
+              id: track.id,
+              title: track.title,
+              artist: track.artist.name
+            }));
+            
             metadata = {
               title: trackList[0].title,
               artist: trackList[0].artist.name,
               albumArtUrl: album.cover,
               albumName: album.title,
+              token: trackList[0].id, // Usar el ID de la primera pista como token
               // Guardar la lista de reproducción para gestionar siguiente/anterior
-              trackList: trackList.map(track => ({
-                id: track.id,
-                title: track.title,
-                artist: track.artist.name
-              })),
+              trackList: simplifiedTrackList,
               currentIndex: 0
             };
             
             speechText = `Reproduciendo el álbum ${album.title} de ${album.artist.name}`;
+            
+            // Guardar la playlist en DynamoDB
+            await playbackPersistenceService.savePlaylist(userId, simplifiedTrackList, 0);
+            
+            // También guardar el estado actual de reproducción
+            await playbackPersistenceService.savePlaybackState(userId, {
+              type: 'album',
+              albumId: album.id,
+              albumName: album.title,
+              artist: album.artist.name,
+              trackId: trackList[0].id,
+              title: trackList[0].title,
+              offsetInMilliseconds: 0,
+              token: trackList[0].id,
+              currentIndex: 0,
+              url: streamUrl
+            });
           } else {
             throw new Error('No se pudieron obtener las pistas del álbum');
           }
@@ -100,31 +138,53 @@ const PlayMusicIntentHandler = {
         // Buscar y reproducir una playlist
         const playlistName = slots.playlist.value;
         
-        logger.info('Buscando playlist', { playlistName });
+        logger.info('Buscando playlist', { playlistName, userId });
         
-        const searchResult = await tidalService.searchPlaylist(accessToken, playlistName);
+        const searchResult = await tidalService.searchPlaylist(accessToken, playlistName, userId);
         
         if (searchResult && searchResult.playlists && searchResult.playlists.length > 0) {
           const playlist = searchResult.playlists[0];
-          const trackList = await tidalService.getPlaylistTracks(accessToken, playlist.id);
+          const trackList = await tidalService.getPlaylistTracks(accessToken, playlist.id, userId);
           
           if (trackList && trackList.length > 0) {
-            streamUrl = await tidalService.getStreamUrl(accessToken, trackList[0].id);
+            streamUrl = await tidalService.getStreamUrl(accessToken, trackList[0].id, userId);
+            
+            // Crear una lista de tracks simplificada para almacenamiento
+            const simplifiedTrackList = trackList.map(track => ({
+              id: track.id,
+              title: track.title,
+              artist: track.artist.name
+            }));
+            
             metadata = {
               title: trackList[0].title,
               artist: trackList[0].artist.name,
               albumArtUrl: playlist.image,
               playlistName: playlist.title,
+              token: trackList[0].id, // Usar el ID de la primera pista como token
               // Guardar la lista de reproducción para gestionar siguiente/anterior
-              trackList: trackList.map(track => ({
-                id: track.id,
-                title: track.title,
-                artist: track.artist.name
-              })),
+              trackList: simplifiedTrackList,
               currentIndex: 0
             };
             
             speechText = `Reproduciendo la playlist ${playlist.title}`;
+            
+            // Guardar la playlist en DynamoDB
+            await playbackPersistenceService.savePlaylist(userId, simplifiedTrackList, 0);
+            
+            // También guardar el estado actual de reproducción
+            await playbackPersistenceService.savePlaybackState(userId, {
+              type: 'playlist',
+              playlistId: playlist.id,
+              playlistName: playlist.title,
+              trackId: trackList[0].id,
+              title: trackList[0].title,
+              artist: trackList[0].artist.name,
+              offsetInMilliseconds: 0,
+              token: trackList[0].id,
+              currentIndex: 0,
+              url: streamUrl
+            });
           } else {
             throw new Error('No se pudieron obtener las pistas de la playlist');
           }
@@ -135,31 +195,53 @@ const PlayMusicIntentHandler = {
         // Reproducir música de un artista
         const artistName = slots.artist.value;
         
-        logger.info('Buscando artista', { artistName });
+        logger.info('Buscando artista', { artistName, userId });
         
-        const searchResult = await tidalService.searchArtist(accessToken, artistName);
+        const searchResult = await tidalService.searchArtist(accessToken, artistName, userId);
         
         if (searchResult && searchResult.artists && searchResult.artists.length > 0) {
           const artist = searchResult.artists[0];
-          const topTracks = await tidalService.getArtistTopTracks(accessToken, artist.id);
+          const topTracks = await tidalService.getArtistTopTracks(accessToken, artist.id, 10, userId);
           
           if (topTracks && topTracks.length > 0) {
-            streamUrl = await tidalService.getStreamUrl(accessToken, topTracks[0].id);
+            streamUrl = await tidalService.getStreamUrl(accessToken, topTracks[0].id, userId);
+            
+            // Crear una lista de tracks simplificada para almacenamiento
+            const simplifiedTrackList = topTracks.map(track => ({
+              id: track.id,
+              title: track.title,
+              artist: track.artist.name
+            }));
+            
             metadata = {
               title: topTracks[0].title,
               artist: artist.name,
               albumArtUrl: topTracks[0].album.cover,
               albumName: topTracks[0].album.title,
+              token: topTracks[0].id, // Usar el ID de la primera pista como token
               // Guardar la lista de reproducción para gestionar siguiente/anterior
-              trackList: topTracks.map(track => ({
-                id: track.id,
-                title: track.title,
-                artist: track.artist.name
-              })),
+              trackList: simplifiedTrackList,
               currentIndex: 0
             };
             
             speechText = `Reproduciendo música de ${artist.name}`;
+            
+            // Guardar la playlist en DynamoDB
+            await playbackPersistenceService.savePlaylist(userId, simplifiedTrackList, 0);
+            
+            // También guardar el estado actual de reproducción
+            await playbackPersistenceService.savePlaybackState(userId, {
+              type: 'artist',
+              artistId: artist.id,
+              artistName: artist.name,
+              trackId: topTracks[0].id,
+              title: topTracks[0].title,
+              albumName: topTracks[0].album.title,
+              offsetInMilliseconds: 0,
+              token: topTracks[0].id,
+              currentIndex: 0,
+              url: streamUrl
+            });
           } else {
             throw new Error('No se pudieron obtener las pistas del artista');
           }
@@ -175,7 +257,7 @@ const PlayMusicIntentHandler = {
           .getResponse();
       }
       
-      // Guardar metadata en la sesión para controles de reproducción
+      // Guardar metadata en la sesión para controles de reproducción (por compatibilidad)
       const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
       sessionAttributes.currentlyPlaying = metadata;
       handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
@@ -186,7 +268,7 @@ const PlayMusicIntentHandler = {
         .addAudioPlayerPlayDirective(
           'REPLACE_ALL',
           streamUrl,
-          metadata.title, // token
+          metadata.token, // Usar el ID como token para identificación única
           0, // offsetInMilliseconds
           null, // expectedPreviousToken
           metadata // audioItemMetadata
@@ -217,8 +299,7 @@ const PlayMusicIntentHandler = {
         .reprompt('¿Qué te gustaría escuchar?')
         .getResponse();
     }
-  }
-};
+  }};
 
 /**
  * Manejador para el intent SearchMusicIntent
@@ -318,73 +399,222 @@ const AudioPlayerEventHandler = {
   },
   async handle(handlerInput) {
     const audioPlayerEventName = handlerInput.requestEnvelope.request.type.split('.')[1];
-    logger.info('Evento AudioPlayer recibido', { audioPlayerEventName });
+    const userId = handlerInput.requestEnvelope.context.System.user.userId;
+    const accessToken = handlerInput.requestEnvelope.context.System.user.accessToken;
     
-    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-    const playbackInfo = sessionAttributes.currentlyPlaying || {};
+    logger.info('Evento AudioPlayer recibido', { audioPlayerEventName, userId });
+    
+    // Obtener información del token actual (identificador del track)
+    const token = handlerInput.requestEnvelope.request.token;
+    
+    // Intentar obtener el estado de reproducción desde DynamoDB
+    let playbackState;
+    try {
+      playbackState = await playbackPersistenceService.getLatestPlaybackState(userId);
+    } catch (error) {
+      logger.error('Error al obtener estado de reproducción', { error, userId });
+      // Continuar aunque no podamos obtener el estado persistente
+    }
+    
+    // Si no hay estado en DynamoDB, intentar usar el de la sesión (por compatibilidad)
+    if (!playbackState) {
+      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+      playbackState = sessionAttributes.currentlyPlaying || {};
+    }
     
     switch (audioPlayerEventName) {
       case 'PlaybackStarted':
         // Realizar acciones cuando comienza la reproducción
-        logger.info('Reproducción iniciada', { playbackInfo });
+        logger.info('Reproducción iniciada', { token, userId });
+        
+        // Documentar en los logs el estado completo
+        if (playbackState) {
+          logger.debug('Estado de reproducción activo', { 
+            userId, 
+            type: playbackState.type,
+            title: playbackState.title,
+            token
+          });
+        }
         break;
         
       case 'PlaybackFinished':
         // Cuando termina una pista, reproducir la siguiente si existe
-        if (playbackInfo.trackList && playbackInfo.currentIndex < playbackInfo.trackList.length - 1) {
+        logger.info('Reproducción finalizada', { token, userId });
+        
+        // Verificar si tenemos una playlist
+        let playlist;
+        try {
+          playlist = await playbackPersistenceService.getPlaylist(userId);
+        } catch (error) {
+          logger.error('Error al obtener playlist', { error, userId });
+        }
+        
+        if (playlist && playlist.trackList && playlist.currentIndex < playlist.trackList.length - 1) {
           try {
-            const accessToken = handlerInput.requestEnvelope.context.System.user.accessToken;
-            const nextIndex = playbackInfo.currentIndex + 1;
-            const nextTrack = playbackInfo.trackList[nextIndex];
+            if (!accessToken) {
+              logger.warn('No hay accessToken para reproducir siguiente pista', { userId });
+              return handlerInput.responseBuilder.getResponse();
+            }
             
-            const streamUrl = await tidalService.getStreamUrl(accessToken, nextTrack.id);
+            const nextIndex = playlist.currentIndex + 1;
+            const nextTrack = playlist.trackList[nextIndex];
             
-            // Actualizar el índice actual
-            playbackInfo.currentIndex = nextIndex;
-            playbackInfo.title = nextTrack.title;
-            playbackInfo.artist = nextTrack.artist;
+            logger.info('Reproduciendo siguiente pista', { 
+              userId,
+              currentIndex: playlist.currentIndex,
+              nextIndex,
+              nextTrack: nextTrack.title
+            });
             
-            sessionAttributes.currentlyPlaying = playbackInfo;
-            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+            const streamUrl = await tidalService.getStreamUrl(accessToken, nextTrack.id, userId);
+            
+            // Actualizar el índice en la playlist persistente
+            await playbackPersistenceService.updatePlaylistIndex(userId, nextIndex);
+            
+            // Actualizar el estado de reproducción
+            await playbackPersistenceService.savePlaybackState(userId, {
+              type: playbackState.type || 'playlist',
+              trackId: nextTrack.id,
+              title: nextTrack.title,
+              artist: nextTrack.artist,
+              offsetInMilliseconds: 0,
+              token: nextTrack.id,
+              currentIndex: nextIndex,
+              url: streamUrl,
+              playlistId: playbackState.playlistId,
+              playlistName: playbackState.playlistName,
+              albumId: playbackState.albumId,
+              albumName: playbackState.albumName,
+              artistId: playbackState.artistId,
+              artistName: playbackState.artistName
+            });
+            
+            // Actualizar la sesión (por compatibilidad)
+            const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+            if (sessionAttributes.currentlyPlaying) {
+              sessionAttributes.currentlyPlaying.currentIndex = nextIndex;
+              sessionAttributes.currentlyPlaying.title = nextTrack.title;
+              sessionAttributes.currentlyPlaying.artist = nextTrack.artist;
+              sessionAttributes.currentlyPlaying.token = nextTrack.id;
+              handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+            }
             
             return handlerInput.responseBuilder
               .addAudioPlayerPlayDirective(
                 'REPLACE_ALL',
                 streamUrl,
-                nextTrack.title, // token
+                nextTrack.id, // token
                 0, // offsetInMilliseconds
                 null, // expectedPreviousToken
-                playbackInfo // audioItemMetadata
+                {
+                  title: nextTrack.title,
+                  artist: nextTrack.artist,
+                  token: nextTrack.id,
+                  currentIndex: nextIndex,
+                  trackList: playlist.trackList
+                } // audioItemMetadata
               )
               .getResponse();
           } catch (error) {
-            logger.error('Error al reproducir siguiente pista', { error });
+            logger.error('Error al reproducir siguiente pista', { error, userId });
+            
+            // Intentar enviar una notificación al usuario sobre el error
+            try {
+              // Usar el API de notificaciones proactivas de Alexa
+              // o guardar el error para informar en la siguiente interacción
+              await playbackPersistenceService.savePlaybackState(userId, {
+                ...playbackState,
+                error: 'No se pudo reproducir la siguiente pista',
+                errorTimestamp: new Date().toISOString()
+              });
+            } catch (notificationError) {
+              logger.error('Error al guardar notificación de error', { notificationError, userId });
+            }
+          }
+        } else {
+          logger.info('Fin de la reproducción, no hay más pistas', { userId });
+          
+          // Actualizar el estado para indicar que la reproducción ha terminado
+          try {
+            if (playbackState) {
+              await playbackPersistenceService.savePlaybackState(userId, {
+                ...playbackState,
+                isComplete: true,
+                completedAt: new Date().toISOString()
+              });
+            }
+          } catch (updateError) {
+            logger.error('Error al actualizar estado final', { updateError, userId });
           }
         }
         break;
         
       case 'PlaybackStopped':
         // Guardar posición para reanudar más tarde
-        sessionAttributes.currentlyPlaying.offsetInMilliseconds = 
-          handlerInput.requestEnvelope.request.offsetInMilliseconds;
-        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-        logger.info('Reproducción detenida', { 
-          offset: handlerInput.requestEnvelope.request.offsetInMilliseconds 
-        });
+        const offsetInMilliseconds = handlerInput.requestEnvelope.request.offsetInMilliseconds;
+        
+        logger.info('Reproducción detenida', { token, offsetInMilliseconds, userId });
+        
+        // Guardar la posición en DynamoDB
+        try {
+          if (playbackState) {
+            await playbackPersistenceService.updateTrackState(userId, token, {
+              offsetInMilliseconds,
+              pausedAt: new Date().toISOString()
+            });
+          }
+        } catch (error) {
+          logger.error('Error al guardar posición de pausa', { error, userId });
+        }
+        
+        // También actualizar en la sesión por compatibilidad
+        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+        if (sessionAttributes.currentlyPlaying) {
+          sessionAttributes.currentlyPlaying.offsetInMilliseconds = offsetInMilliseconds;
+          handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+        }
         break;
         
       case 'PlaybackFailed':
         // Manejar errores de reproducción
+        const errorType = handlerInput.requestEnvelope.request.error.type;
+        const errorMessage = handlerInput.requestEnvelope.request.error.message;
+        
         logger.error('Error de reproducción', { 
-          error: handlerInput.requestEnvelope.request.error 
+          errorType,
+          errorMessage,
+          token,
+          userId
         });
+        
+        // Guardar el error en el estado de reproducción
+        try {
+          if (playbackState) {
+            await playbackPersistenceService.savePlaybackState(userId, {
+              ...playbackState,
+              error: errorMessage,
+              errorType,
+              errorTimestamp: new Date().toISOString()
+            });
+          }
+        } catch (error) {
+          logger.error('Error al guardar información de error', { error, userId });
+        }
+        break;
+        
+      case 'PlaybackNearlyFinished':
+        // Preparar la siguiente pista para reproducción sin buffering
+        logger.info('Reproducción casi finalizada', { token, userId });
+        
+        // Se podría implementar pre-buffering o pre-caching de la siguiente pista
+        // pero por ahora simplemente logueamos el evento
         break;
     }
     
     return handlerInput.responseBuilder.getResponse();
   }
 };
-
 /**
  * Manejador para el intent AMAZON.PauseIntent
  * Pausa la reproducción actual
@@ -412,17 +642,10 @@ const ResumeIntentHandler = {
   },
   async handle(handlerInput) {
     try {
-      const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-      const playbackInfo = sessionAttributes.currentlyPlaying;
-      
-      if (!playbackInfo) {
-        return handlerInput.responseBuilder
-          .speak('No hay nada para reanudar. ¿Qué te gustaría escuchar?')
-          .reprompt('Puedes pedirme que reproduzca una canción, álbum o playlist.')
-          .getResponse();
-      }
-      
+      const userId = handlerInput.requestEnvelope.context.System.user.userId;
       const accessToken = handlerInput.requestEnvelope.context.System.user.accessToken;
+      
+      logger.info('Manejando ResumeIntent', { userId });
       
       if (!accessToken) {
         return handlerInput.responseBuilder
@@ -431,27 +654,112 @@ const ResumeIntentHandler = {
           .getResponse();
       }
       
-      // Si tenemos una lista de reproducción, obtener el track actual
-      let trackId;
-      if (playbackInfo.trackList && typeof playbackInfo.currentIndex !== 'undefined') {
-        trackId = playbackInfo.trackList[playbackInfo.currentIndex].id;
-      } else {
-        // Si es una sola canción, reconstruir el ID desde el token
-        trackId = playbackInfo.title; // Esto asume que usamos el título como token
+      // Intentar obtener el estado de reproducción desde DynamoDB
+      let playbackState;
+      try {
+        playbackState = await playbackPersistenceService.getLatestPlaybackState(userId);
+      } catch (error) {
+        logger.error('Error al obtener estado de reproducción', { error, userId });
       }
       
-      const streamUrl = await tidalService.getStreamUrl(accessToken, trackId);
-      const offset = playbackInfo.offsetInMilliseconds || 0;
+      // Si no hay estado en DynamoDB, intentar usar el de la sesión (por compatibilidad)
+      if (!playbackState) {
+        const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+        playbackState = sessionAttributes.currentlyPlaying;
+      }
+      
+      if (!playbackState) {
+        return handlerInput.responseBuilder
+          .speak('No hay nada para reanudar. ¿Qué te gustaría escuchar?')
+          .reprompt('Puedes pedirme que reproduzca una canción, álbum o playlist.')
+          .getResponse();
+      }
+      
+      logger.info('Reanudando reproducción', { 
+        userId,
+        track: playbackState.title,
+        artist: playbackState.artist
+      });
+      
+      // Si tenemos la URL guardada y no ha pasado mucho tiempo (menos de 1 hora)
+      const savedUrl = playbackState.url;
+      const offset = playbackState.offsetInMilliseconds || 0;
+      
+      let streamUrl;
+      
+      // Verificar si la URL guardada aún es válida
+      const pausedAt = playbackState.pausedAt ? new Date(playbackState.pausedAt) : null;
+      const urlIsValid = pausedAt && ((new Date() - pausedAt) < 60 * 60 * 1000); // 1 hora
+      
+      if (savedUrl && urlIsValid) {
+        // Usar la URL guardada si aún es válida
+        streamUrl = savedUrl;
+        logger.info('Usando URL guardada para reanudar', { userId });
+      } else {
+        // Obtener una nueva URL si no tenemos una o ha expirado
+        try {
+          // Obtener el ID de la pista a reanudar
+          let trackId;
+          
+          if (playbackState.trackId) {
+            trackId = playbackState.trackId;
+          } else if (playbackState.token) {
+            trackId = playbackState.token;
+          } else if (playbackState.trackList && typeof playbackState.currentIndex !== 'undefined') {
+            trackId = playbackState.trackList[playbackState.currentIndex].id;
+          } else {
+            throw new Error('No se puede determinar qué pista reanudar');
+          }
+          
+          // Obtener nueva URL de streaming
+          streamUrl = await tidalService.getStreamUrl(accessToken, trackId, userId);
+          
+          // Actualizar la URL en el estado de reproducción
+          await playbackPersistenceService.updateTrackState(userId, trackId, {
+            url: streamUrl,
+            updatedAt: new Date().toISOString()
+          });
+          
+          logger.info('Obtenida nueva URL para reanudar', { userId, trackId });
+        } catch (error) {
+          logger.error('Error al obtener URL para reanudar', { error, userId });
+          throw error;
+        }
+      }
+      
+      // Construir metadata para la reproducción
+      const metadata = {
+        title: playbackState.title,
+        artist: playbackState.artist,
+        token: playbackState.token || playbackState.trackId,
+        offsetInMilliseconds: offset
+      };
+      
+      // Si hay una lista de reproducción, incluirla
+      if (playbackState.trackList && typeof playbackState.currentIndex !== 'undefined') {
+        metadata.trackList = playbackState.trackList;
+        metadata.currentIndex = playbackState.currentIndex;
+      }
+      
+      // Añadir información del álbum si está disponible
+      if (playbackState.albumName) {
+        metadata.albumName = playbackState.albumName;
+      }
+      
+      // Actualizar timestamp de reanudación
+      await playbackPersistenceService.updateTrackState(userId, metadata.token, {
+        resumedAt: new Date().toISOString()
+      });
       
       return handlerInput.responseBuilder
         .speak('Reanudando reproducción.')
         .addAudioPlayerPlayDirective(
           'REPLACE_ALL',
           streamUrl,
-          playbackInfo.title, // token
+          metadata.token, // token
           offset, // offsetInMilliseconds
           null, // expectedPreviousToken
-          playbackInfo // audioItemMetadata
+          metadata // audioItemMetadata
         )
         .getResponse();
     } catch (error) {

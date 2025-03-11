@@ -1,0 +1,125 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Tidal Music Skill
+  Skill de Alexa para integración con Tidal
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Description: Entorno de despliegue
+
+Resources:
+  # Tablas DynamoDB
+  TidalTokensTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TidalTokens-dev
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: accessToken
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: accessToken
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: AccessTokenIndex
+          KeySchema:
+            - AttributeName: accessToken
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: dev
+        - Key: Service
+          Value: TidalMusicSkill
+
+  TidalPlaybackStateTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TidalPlaybackState-dev
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: dev
+        - Key: Service
+          Value: TidalMusicSkill
+
+  # Lambda Function
+  TidalMusicSkillFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: index.handler
+      Runtime: nodejs16.x
+      Timeout: 10
+      MemorySize: 256
+      Environment:
+        Variables:
+          TOKEN_TABLE: TidalTokens-dev
+          PLAYBACK_TABLE: TidalPlaybackState-dev
+          ENVIRONMENT: dev
+          LOG_LEVEL: info
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: 
+              Ref: "TidalTokensTable"
+        - DynamoDBCrudPolicy:
+            TableName:
+              Ref: "TidalPlaybackStateTable"
+      Tags:
+        Environment:
+          Ref: "Environment"
+        Service: "TidalMusicSkill"
+
+Outputs:
+  TidalTokensTableArn:
+    Description: "ARN de la tabla de tokens de Tidal"
+    Value:
+      Fn::GetAtt: [TidalTokensTable, Arn]
+    Export:
+      Name:
+        Fn::Sub: "${AWS::StackName}-TidalTokensTableArn"
+
+  TidalPlaybackStateTableArn:
+    Description: "ARN de la tabla de estado de reproducción de Tidal"
+    Value:
+      Fn::GetAtt: [TidalPlaybackStateTable, Arn]
+    Export:
+      Name:
+        Fn::Sub: "${AWS::StackName}-TidalPlaybackStateTableArn"
+
+  TidalMusicSkillFunctionArn:
+    Description: "ARN de la función Lambda de la skill de Tidal"
+    Value:
+      Fn::GetAtt: [TidalMusicSkillFunction, Arn]
+    Export:
+      Name:
+        Fn::Sub: "${AWS::StackName}-TidalMusicSkillFunctionArn"

@@ -16,7 +16,7 @@ const HelpIntentHandler = {
   },
   handle(handlerInput) {
     const speechText = 'Puedes pedirme que reproduzca canciones, álbumes o playlists de Tidal. ' +
-      'Por ejemplo, di "reproduce Despacito" o "busca canciones de Rosalía".';
+      'Por ejemplo, di "reproduce Suicide machine" o "busca canciones de Death".';
       
     return handlerInput.responseBuilder
       .speak(speechText)

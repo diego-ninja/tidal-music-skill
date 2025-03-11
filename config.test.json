@@ -1,0 +1,28 @@
+{
+    "app": {
+      "environment": "test"
+    },
+    "logger": {
+      "level": "info",
+      "format": "json",
+      "includeSensitive": false
+    },
+    "dynamoDB": {
+      "tokenTable": "TidalTokens-test",
+      "playbackTable": "TidalPlaybackState-test"
+    },
+    "tidal": {
+      "apiTimeout": 5000,
+      "countryCode": "US"
+    },
+    "cache": {
+      "enabled": true,
+      "defaultTTL": 60,
+      "maxSize": 50
+    },
+    "retry": {
+      "maxRetries": 2,
+      "baseDelayMs": 500,
+      "maxDelayMs": 5000
+    }
+  }

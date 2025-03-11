@@ -1,0 +1,32 @@
+{
+    "app": {
+      "environment": "production",
+      "isLocal": false
+    },
+    "logger": {
+      "level": "info",
+      "format": "json",
+      "includeSensitive": false
+    },
+    "dynamoDB": {
+      "tokenTable": "TidalTokens-prod",
+      "playbackTable": "TidalPlaybackState-prod",
+      "ttlEnabled": true,
+      "ttlSeconds": 2592000
+    },
+    "tidal": {
+      "apiTimeout": 3000,
+      "countryCode": "US",
+      "streamUrlTTL": 3600
+    },
+    "cache": {
+      "enabled": true,
+      "defaultTTL": 120,
+      "maxSize": 1000
+    },
+    "retry": {
+      "maxRetries": 3,
+      "baseDelayMs": 500,
+      "maxDelayMs": 5000
+    }
+  }

@@ -1,7 +1,7 @@
 {
     "interactionModel": {
       "languageModel": {
-        "invocationName": "tidal música",
+        "invocationName": "tidal",
         "intents": [
           {
             "name": "AMAZON.CancelIntent",
@@ -83,9 +83,122 @@
           {
             "name": "AMAZON.PreviousIntent",
             "samples": []
+          },
+          {
+            "name": "DiagnosticsIntent",
+            "slots": [],
+            "samples": [
+              "diagnóstico",
+              "estado del sistema",
+              "mostrar estadísticas",
+              "estadísticas de caché",
+              "información del sistema",
+              "cómo está el sistema",
+              "estado de la caché"
+            ]
+          },
+          {
+            "name": "ClearCacheIntent",
+            "slots": [
+              {
+                "name": "cacheType",
+                "type": "CACHE_TYPE"
+              }
+            ],
+            "samples": [
+              "limpiar caché",
+              "borrar caché",
+              "reiniciar caché",
+              "vaciar caché",
+              "limpiar la caché de {cacheType}",
+              "borrar la caché de {cacheType}",
+              "reiniciar la caché de {cacheType}",
+              "vaciar la caché de {cacheType}"
+            ]
           }
         ],
-        "types": []
+        "types": [
+          {
+            "name": "CACHE_TYPE",
+            "values": [
+              {
+                "id": "tracks",
+                "name": {
+                  "value": "tracks",
+                  "synonyms": [
+                    "canciones",
+                    "pistas",
+                    "temas"
+                  ]
+                }
+              },
+              {
+                "id": "albums",
+                "name": {
+                  "value": "albums",
+                  "synonyms": [
+                    "álbumes",
+                    "discos"
+                  ]
+                }
+              },
+              {
+                "id": "artists",
+                "name": {
+                  "value": "artists",
+                  "synonyms": [
+                    "artistas",
+                    "cantantes",
+                    "grupos"
+                  ]
+                }
+              },
+              {
+                "id": "playlists",
+                "name": {
+                  "value": "playlists",
+                  "synonyms": [
+                    "listas",
+                    "listas de reproducción"
+                  ]
+                }
+              },
+              {
+                "id": "userInfo",
+                "name": {
+                  "value": "userInfo",
+                  "synonyms": [
+                    "usuario",
+                    "información de usuario",
+                    "datos de usuario"
+                  ]
+                }
+              },
+              {
+                "id": "search",
+                "name": {
+                  "value": "search",
+                  "synonyms": [
+                    "búsqueda",
+                    "búsquedas",
+                    "resultados"
+                  ]
+                }
+              },
+              {
+                "id": "streamUrl",
+                "name": {
+                  "value": "streamUrl",
+                  "synonyms": [
+                    "streaming",
+                    "reproducción",
+                    "urls"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
       }
     }
   }
