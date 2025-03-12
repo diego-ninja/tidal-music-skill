@@ -4,7 +4,7 @@
  */
 
 const winston = require('winston');
-const config = require('./configService');
+const config = require('../services/configService');
 
 // Obtener configuración de logger
 const loggerConfig = config.getSection('logger');

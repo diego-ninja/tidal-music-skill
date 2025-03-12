@@ -2,6 +2,8 @@
  * Punto de entrada principal para la skill de Alexa de Tidal
  */
 
+require('dotenv').config();
+
 const Alexa = require('ask-sdk-core');
 const config = require('./services/configService');
 const logger = require('./utils/logger');
